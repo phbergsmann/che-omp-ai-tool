@@ -5,7 +5,11 @@
       "name": "Oh My Pi",
       "publisher": "oh-my-pi",
       "description": "Terminal AI coding agent with configurable model providers.",
-      "docsUrl": "https://github.com/can1357/oh-my-pi"
+      "docsUrl": "https://github.com/can1357/oh-my-pi",
+      "icon": "https://raw.githubusercontent.com/can1357/oh-my-pi/7cc912940b107eb2d771b0d106c640a8eddc9edf/packages/collab-web/public/favicon.svg",
+      "tags": [
+        "Community"
+      ]
     }
   ],
   "tools": [
