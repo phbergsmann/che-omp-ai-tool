@@ -102,13 +102,14 @@ jobs:
         env:
           DIGEST: ${{ steps.build.outputs.digest }}
           EXPECTED_VERSION: ${{ needs.preflight.outputs.omp-version }}
+          SCAN_PLATFORM: linux/${{ matrix.arch }}
           TRIVY_USERNAME: ${{ github.actor }}
           TRIVY_PASSWORD: ${{ github.token }}
         run: |
           output=$(docker run --rm "$IMAGE@$DIGEST" --version)
           printf '%s\n' "$output"
           test "$output" = "omp/${EXPECTED_VERSION#v}"
-          docker run --rm -e TRIVY_USERNAME -e TRIVY_PASSWORD aquasec/trivy:0.61.1 image --exit-code 1 --severity HIGH,CRITICAL "$IMAGE@$DIGEST"
+          docker run --rm -e TRIVY_USERNAME -e TRIVY_PASSWORD aquasec/trivy:0.61.1 image --platform "$SCAN_PLATFORM" --exit-code 1 --severity HIGH,CRITICAL "$IMAGE@$DIGEST"
       - name: Record validated digest
         env:
           DIGEST: ${{ steps.build.outputs.digest }}
