@@ -77,6 +77,8 @@ Each runner pushes an untagged platform index by digest, with BuildKit SBOM and
 maximum-mode provenance attestations. It executes `omp --version` from that
 exact pushed digest and scans it natively with Trivy 0.61.1; HIGH/CRITICAL
 findings fail the release. Private image pulls are explicitly authenticated.
+The scan platform is explicitly set from the native architecture matrix: Trivy
+otherwise defaults remote index resolution to `linux/amd64`, even on an ARM runner.
 Unique per-architecture digest artifacts pass only validated images to the
 publication job. That job rechecks full-tag absence, merges both platform
 indexes (including their attestations) into the immutable multiarch manifest,
@@ -115,6 +117,11 @@ native platform. Prefer the digest reference for deployment. Full-version tags
 are workflow-enforced immutable; moving aliases are intentionally not.
 Administrators provide private GHCR image-pull credentials to Che/Dev Spaces;
 neither image nor registry embeds credentials.
+
+If publication failed before creating the full-version image tag, fix the
+workflow on `main` and use the trusted manual release path with the existing,
+unchanged integration tag. This updates orchestration without moving the source
+tag or weakening validation.
 
 A failure after the full tag has been pushed can leave an immutable, unpromoted
 image without release artifacts. The workflow must not overwrite it on rerun.
