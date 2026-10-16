@@ -1,0 +1,27 @@
+{
+  "providers": [
+    {
+      "id": "oh-my-pi/omp",
+      "name": "Oh My Pi",
+      "publisher": "oh-my-pi",
+      "description": "Terminal AI coding agent with configurable model providers.",
+      "docsUrl": "https://github.com/can1357/oh-my-pi"
+    }
+  ],
+  "tools": [
+    {
+      "providerId": "oh-my-pi/omp",
+      "tag": "v0.1.0",
+      "name": "Oh My Pi",
+      "url": "https://github.com/can1357/oh-my-pi",
+      "binary": "omp",
+      "pattern": "init",
+      "injectorImage": "ghcr.io/phbergsmann/che-omp-ai-tool:v0.1.0",
+      "arch": [
+        "x86_64",
+        "arm64"
+      ]
+    }
+  ],
+  "defaultAiProviders": []
+}
