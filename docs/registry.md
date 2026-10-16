@@ -34,6 +34,63 @@ entry. Configure models, endpoints, and credentials through OMP's own settings i
 the workspace; OpenAI, Anthropic, vLLM, and other backends are not separate Che
 providers for this integration.
 
+## Logo and Community metadata
+
+The provider uses the upstream Oh My Pi collaboration application's
+[square SVG favicon](https://github.com/can1357/oh-my-pi/blob/7cc912940b107eb2d771b0d106c640a8eddc9edf/packages/collab-web/public/favicon.svg),
+pinned to commit `7cc912940b107eb2d771b0d106c640a8eddc9edf` (`v18.11.1`).
+Its public `raw.githubusercontent.com` URL requires no authentication. The
+gradient pi mark has its own dark rounded background, unlike the upstream
+white-on-transparent header icon; it is intended to remain visible at the
+dashboard's 20×20 icon size in both themes, including the dashboard's light
+icon background in dark mode. This is OMP branding, not a model-provider logo.
+
+The upstream repository distributes the asset under its
+[MIT license](https://github.com/can1357/oh-my-pi/blob/7cc912940b107eb2d771b0d106c640a8eddc9edf/LICENSE):
+copyright 2025 Mario Zechner, 2025–2026 Can Bölük, and 2026 Stencil Labs, Inc.
+The asset is linked unchanged rather than copied into this private repository.
+This usage does not imply upstream, Red Hat, or model-vendor support.
+
+`tags: ["Community"]` describes maintenance of this Che integration only.
+The provider remains `oh-my-pi/omp`, named `Oh My Pi`, published by `oh-my-pi`.
+Do not replace it with `Tech-Preview` merely to obtain a visible badge.
+
+**Visible Community badge pending upstream support.** OpenShift Dev Spaces
+`3.30.2`, with dashboard image
+`registry.redhat.io/devspaces/dashboard-rhel9@sha256:e5ce2b3dbfbf9f41883fc3291f6f11f937f8238238c9aa1b20b64d5bbb000600`,
+filters AI card tags to the exact string `Tech-Preview`. This was verified in
+its deployed `client.ef2c2550.js`; valid Community metadata is therefore not
+displayed as a badge in that version. The dependency is
+[eclipse-che/che#23997](https://github.com/eclipse-che/che/issues/23997), which
+requests Community support while preserving Tech-Preview behavior. A dashboard
+release containing that enhancement is required for a visible Community badge.
+The logo can be deployed independently without replacing the dashboard.
+
+Rendering, installation, and future release registry assets retain the icon and
+tags. Existing immutable image tags and published release assets are not changed.
+To update a current installation, use the current registry CLI with the **same**
+image digest and tool tag already installed:
+
+```sh
+python3 scripts/registry.py install --namespace openshift-devspaces \
+  --image "$CURRENT_IMAGE_DIGEST_REFERENCE" --tag "$CURRENT_TOOL_TAG" --dry-run
+python3 scripts/registry.py install --namespace openshift-devspaces \
+  --image "$CURRENT_IMAGE_DIGEST_REFERENCE" --tag "$CURRENT_TOOL_TAG"
+```
+
+Refresh the real provider selector and check both dashboard themes. The image
+must load at 20×20 without being hidden by the card's image-error handler;
+browser network/CSP rules must permit its public host. Community should be
+visible only on a supporting dashboard; the metadata alone is not proof.
+
+Manual verification on 2026-10-16 used the live deployed selector and real Che
+APIs through an authenticated loopback transport, not mocked UI/API responses.
+The unchanged SVG loaded anonymously and was visibly legible at computed
+20×20 sizing in both light and dark themes, including the dark theme's
+`rgb(242, 242, 242)` icon background. The image was not hidden; no Community
+badge rendered, consistent with the deployed filter. Screenshots are recorded in
+[issue #11](https://github.com/phbergsmann/che-omp-ai-tool/issues/11).
+
 ## Commands
 
 Only Python 3's standard library is required for local validation and rendering:
