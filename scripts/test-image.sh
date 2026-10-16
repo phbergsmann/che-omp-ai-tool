@@ -2,11 +2,12 @@
 set -eu
 root=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
 engine=${CONTAINER_ENGINE:-podman}
-image=${IMAGE:-ghcr.io/phbergsmann/che-omp-ai-tool:v0.1.0}
+version=$(cat "$root/OMP_VERSION")
+image=${IMAGE:-ghcr.io/phbergsmann/che-omp-ai-tool:$version}
 workspace=${WORKSPACE_IMAGE:-registry.access.redhat.com/ubi9/ubi:9.6}
 # Keep the default inside rootless Podman's subordinate-ID range.
 uid=${SMOKE_UID:-12345}
-expected="omp/$(cut -c 2- "$root/OMP_VERSION")"
+expected="omp/${version#v}"
 volume="omp-injection-smoke-$$"
 cleanup() { "$engine" volume rm -f "$volume" >/dev/null 2>&1 || :; }
 trap cleanup EXIT HUP INT TERM

@@ -130,7 +130,7 @@ def main():
     parser.add_argument('stage', choices=['prepare', 'verify', 'restart', 'upgrade'])
     parser.add_argument('--che-namespace', default='eclipse-che')
     parser.add_argument('--image', required=True)
-    parser.add_argument('--tag', default='v0.1.0')
+    parser.add_argument('--tag')
     parser.add_argument('--omp-version', default=(ROOT / 'OMP_VERSION').read_text().strip())
     parser.add_argument('--registry-url', help='Authenticated dashboard /dashboard/api/ai-registry URL')
     parser.add_argument('--workspace-namespace')
@@ -141,6 +141,8 @@ def main():
     parser.add_argument('--artifacts', default='artifacts/e2e')
     parser.add_argument('--openshift', action='store_true')
     args = parser.parse_args()
+    if args.tag is None:
+        args.tag = args.omp_version
     if args.stage in ('prepare', 'upgrade') and not args.registry_url:
         parser.error('--registry-url is required for backend recognition verification')
     if args.stage in ('verify', 'restart') and not (args.workspace_namespace and args.workspace):

@@ -26,12 +26,11 @@ RUN set -eu; \
 
 FROM registry.access.redhat.com/hi/core-runtime:2.43@sha256:12ebc4493ccbb80fd47175c9c670ea590c4e7140a7c4858e038ac2df42be8ca8
 ARG OMP_VERSION
-ARG INTEGRATION_VERSION=0.1.0
 ARG VCS_REF=unknown
 LABEL org.opencontainers.image.title="OMP Che AI tool injector" \
       org.opencontainers.image.description="Standalone upstream OMP executable for Eclipse Che init injection" \
       org.opencontainers.image.source="https://github.com/phbergsmann/che-omp-ai-tool" \
-      org.opencontainers.image.version="${INTEGRATION_VERSION}" \
+      org.opencontainers.image.version="${OMP_VERSION}" \
       org.opencontainers.image.revision="${VCS_REF}" \
       org.opencontainers.image.licenses="MIT AND LicenseRef-Upstream-Third-Party" \
       io.github.phbergsmann.omp.version="${OMP_VERSION}" \

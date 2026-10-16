@@ -148,12 +148,16 @@ preferred: the embedded Bun/JavaScriptCore runtime can fail under CPU emulation
 even when the binary works on native hardware. Release validation therefore
 uses a native runner for each architecture.
 
-## Integration versus upstream metadata
+## Upstream version and integration metadata
 
-`ghcr.io/phbergsmann/che-omp-ai-tool:v0.1.0` is the integration image version;
-it is independent of the OMP version. `INTEGRATION_VERSION` populates the OCI
-version label; `VCS_REF` supplies this repository's revision (default `unknown`
-for a local build). `io.github.phbergsmann.omp.version` records the upstream tag.
+`OMP_VERSION` is the sole release version: `v18.11.1` identifies both upstream
+OMP and `ghcr.io/phbergsmann/che-omp-ai-tool:v18.11.1`. There is no independent
+integration version. `OMP_VERSION` populates the OCI version label and
+`io.github.phbergsmann.omp.version`; `VCS_REF` supplies this repository's revision
+in `org.opencontainers.image.revision` (default `unknown` for a local build).
+An integration-only change is identified by its Git revision, not a separate
+release number; an existing upstream release image must not be overwritten.
+Use an image digest for an immutable deployment.
 The source label identifies this integration repository, while the separate
 OMP source label identifies `can1357/oh-my-pi`. The license label records MIT
 plus upstream third-party terms; consult the included notices for those terms.

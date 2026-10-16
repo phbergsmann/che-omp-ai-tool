@@ -24,6 +24,14 @@ class ReleaseTests(unittest.TestCase):
             with self.subTest(tag=tag), self.assertRaises(ValueError):
                 release.Version.parse(tag)
 
+    def test_release_tag_must_match_embedded_omp_version(self):
+        release.validate_release_version("v18.11.1", "v18.11.1")
+        for tag in ("v0.1.0", "v18.11.2", "v18.11.1-rc.1", "18.11.1"):
+            with self.subTest(tag=tag), self.assertRaisesRegex(ValueError, "must match OMP_VERSION"):
+                release.validate_release_version(tag, "v18.11.1")
+        with self.assertRaises(ValueError):
+            release.validate_release_version("invalid", "invalid")
+
     def test_first_release(self):
         self.assertEqual(release.moving_tags("v1.2.3", []), ["v1.2", "v1", "latest"])
 
