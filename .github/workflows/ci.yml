@@ -1,0 +1,55 @@
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  static:
+    runs-on: ubuntu-24.04
+    outputs:
+      image-changed: ${{ steps.changes.outputs.image-changed }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - name: Filter native build inputs
+        id: changes
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        shell: python
+        run: |
+          import os
+          import subprocess
+          base = os.environ["BASE_SHA"]
+          changed = True
+          if base:
+              paths = subprocess.check_output(["git", "diff", "--name-only", f"{base}...HEAD"], text=True).splitlines()
+              changed = any(p in ("Containerfile", "OMP_VERSION") or p.startswith(("scripts/", "test/", "registry/", ".github/")) for p in paths)
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+              output.write(f"image-changed={str(changed).lower()}\n")
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12.9'
+      - name: Install pinned YAML linter
+        run: python3 -m pip install yamllint==1.35.1
+      - name: Static validation and unit tests
+        run: sh scripts/check.sh
+  native-image:
+    needs: static
+    if: needs.static.outputs.image-changed == 'true'
+    runs-on: ubuntu-24.04
+    env:
+      CONTAINER_ENGINE: docker
+      IMAGE: che-omp-ai-tool:ci
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Build one native image
+        run: sh scripts/build-image.sh
+      - name: Smoke test injector and OMP version
+        run: sh scripts/test-image.sh

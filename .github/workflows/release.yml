@@ -1,0 +1,196 @@
+name: Release
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Existing integration tag (vX.Y.Z or vX.Y.Z-prerelease)
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: ghcr-release
+  cancel-in-progress: false
+env:
+  IMAGE: ghcr.io/phbergsmann/che-omp-ai-tool
+  RELEASE_VERSION: ${{ inputs.version || github.ref_name }}
+jobs:
+  preflight:
+    if: github.event_name == 'push' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    environment: release
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      version: ${{ steps.plan.outputs.version }}
+      moving: ${{ steps.plan.outputs.moving }}
+      omp-version: ${{ steps.plan.outputs.omp_version }}
+      revision: ${{ steps.plan.outputs.vcs_ref }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.version || github.ref_name }}
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12.9'
+      - name: Validate trusted tag and plan monotonic publication
+        id: plan
+        env:
+          GHCR_TOKEN: ${{ github.token }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$(git rev-parse "refs/tags/$RELEASE_VERSION^{commit}")"
+          python3 scripts/release.py --version "$RELEASE_VERSION" --image "$IMAGE" --github-output "$GITHUB_OUTPUT"
+          echo "omp_version=$(cat OMP_VERSION)" >> "$GITHUB_OUTPUT"
+          echo "vcs_ref=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+      - name: Install pinned YAML linter
+        run: python3 -m pip install yamllint==1.35.1
+      - name: Validate before native builds
+        run: sh scripts/check.sh
+  platform:
+    needs: preflight
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ needs.preflight.outputs.revision }}
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - name: Build and smoke-test on native hardware
+        env:
+          CONTAINER_ENGINE: docker
+          IMAGE: che-omp-ai-tool:ci
+          INTEGRATION_VERSION: ${{ needs.preflight.outputs.version }}
+          VCS_REF: ${{ needs.preflight.outputs.revision }}
+        run: |
+          sh scripts/build-image.sh
+          sh scripts/test-image.sh
+      - name: Push native image by digest with SBOM and provenance
+        id: build
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          file: Containerfile
+          platforms: linux/${{ matrix.arch }}
+          outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
+          sbom: true
+          provenance: mode=max
+          build-args: |
+            INTEGRATION_VERSION=${{ needs.preflight.outputs.version }}
+            OMP_VERSION=${{ needs.preflight.outputs.omp-version }}
+            VCS_REF=${{ needs.preflight.outputs.revision }}
+      - name: Execute exact published image and scan natively
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+          EXPECTED_VERSION: ${{ needs.preflight.outputs.omp-version }}
+          TRIVY_USERNAME: ${{ github.actor }}
+          TRIVY_PASSWORD: ${{ github.token }}
+        run: |
+          output=$(docker run --rm "$IMAGE@$DIGEST" --version)
+          printf '%s\n' "$output"
+          test "$output" = "omp/${EXPECTED_VERSION#v}"
+          docker run --rm -e TRIVY_USERNAME -e TRIVY_PASSWORD aquasec/trivy:0.61.1 image --exit-code 1 --severity HIGH,CRITICAL "$IMAGE@$DIGEST"
+      - name: Record validated digest
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          mkdir -p digests
+          printf '%s\n' "$DIGEST" > "digests/${{ matrix.arch }}.txt"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: digest-${{ matrix.arch }}
+          path: digests/${{ matrix.arch }}.txt
+          if-no-files-found: error
+          retention-days: 7
+  publish:
+    needs: [preflight, platform]
+    runs-on: ubuntu-24.04
+    environment: release
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GHCR_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ needs.preflight.outputs.revision }}
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: digest-*
+          path: digests
+          merge-multiple: true
+      - name: Recheck immutability and assemble validated platform indexes
+        id: manifest
+        run: |
+          python3 scripts/release.py --version "$RELEASE_VERSION" --image "$IMAGE"
+          sources=()
+          for arch in amd64 arm64; do
+            digest=$(cat "digests/$arch.txt")
+            [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]
+            sources+=("$IMAGE@$digest")
+          done
+          docker buildx imagetools create --tag "$IMAGE:$RELEASE_VERSION" "${sources[@]}"
+          digest=$(docker buildx imagetools inspect "$IMAGE:$RELEASE_VERSION" --format '{{.Manifest.Digest}}')
+          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+      - uses: sigstore/cosign-installer@f713795cb21599bc4e5c4b58cbad1da852d7eeb9 # v3
+        with:
+          cosign-release: v2.4.3
+      - name: Sign immutable manifest using GitHub OIDC
+        env:
+          DIGEST: ${{ steps.manifest.outputs.digest }}
+        run: cosign sign --yes "$IMAGE@$DIGEST"
+      - name: Promote independently eligible compatibility tags
+        env:
+          MOVING: ${{ needs.preflight.outputs.moving }}
+          DIGEST: ${{ steps.manifest.outputs.digest }}
+        run: |
+          if [ -n "$MOVING" ]; then
+            IFS=',' read -ra tags <<< "$MOVING"
+            args=()
+            for tag in "${tags[@]}"; do args+=(--tag "$tag"); done
+            docker buildx imagetools create "${args[@]}" "$IMAGE@$DIGEST"
+          fi
+      - name: Publish digest-pinned registry and release output
+        env:
+          DIGEST: ${{ steps.manifest.outputs.digest }}
+          OMP_VERSION: ${{ needs.preflight.outputs.omp-version }}
+        run: |
+          python3 scripts/registry.py render --image "$IMAGE@$DIGEST" --tag "$RELEASE_VERSION" > registry.json
+          printf '%s\n' "$IMAGE@$DIGEST" > image-digest.txt
+          if ! gh release view "$RELEASE_VERSION" --repo "$GITHUB_REPOSITORY"; then
+            extra=()
+            if [[ "$RELEASE_VERSION" == *-* ]]; then extra+=(--prerelease); fi
+            gh release create "$RELEASE_VERSION" --repo "$GITHUB_REPOSITORY" --verify-tag --title "$RELEASE_VERSION" --notes "Injector image: $IMAGE@$DIGEST" "${extra[@]}"
+          fi
+          gh release upload "$RELEASE_VERSION" registry.json image-digest.txt --repo "$GITHUB_REPOSITORY"
+          printf "### Published image\n\n\`%s@%s\`\n\nIntegration: \`%s\`; OMP: \`%s\`\n" "$IMAGE" "$DIGEST" "$RELEASE_VERSION" "$OMP_VERSION" >> "$GITHUB_STEP_SUMMARY"

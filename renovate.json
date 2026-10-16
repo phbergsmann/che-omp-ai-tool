@@ -1,0 +1,23 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", "helpers:pinGitHubActionDigests"],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["/^OMP_VERSION$/"],
+      "matchStrings": ["(?<currentValue>v\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?)\\s*"],
+      "depNameTemplate": "can1357/oh-my-pi",
+      "datasourceTemplate": "github-releases",
+      "versioningTemplate": "semver"
+    }
+  ],
+  "packageRules": [
+    {
+      "matchDepNames": ["can1357/oh-my-pi"],
+      "automerge": false,
+      "commitMessageTopic": "OMP",
+      "commitMessageExtra": "from {{currentValue}} to {{newValue}}",
+      "prBodyNotes": ["Updates only the canonical OMP_VERSION source. Native build, omp --version, and registry validation must pass; no publishing or cluster E2E runs on this PR."]
+    }
+  ]
+}
