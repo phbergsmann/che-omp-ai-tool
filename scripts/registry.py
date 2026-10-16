@@ -10,6 +10,7 @@ import sys
 
 PROVIDER_ID = "oh-my-pi/omp"
 REGISTRY_PATH = Path(__file__).resolve().parents[1] / "registry" / "registry.json"
+OMP_VERSION_PATH = REGISTRY_PATH.parents[1] / "OMP_VERSION"
 LABELS = {"app.kubernetes.io/component": "ai-tool-registry",
           "app.kubernetes.io/part-of": "che.eclipse.org"}
 SELECTOR = ",".join(f"{key}={value}" for key, value in LABELS.items())
@@ -100,8 +101,18 @@ def dumps(value):
 
 
 def render(image=None, tag=None):
-    registry = load_json(REGISTRY_PATH.read_text())
+    version = OMP_VERSION_PATH.read_text().strip()
+    match = re.fullmatch(r"v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?", version)
+    if not match:
+        raise ValueError("OMP_VERSION must be a v-prefixed SemVer release tag")
+    prerelease = match[4].split(".") if match[4] else []
+    if any(part.isdigit() and len(part) > 1 and part.startswith("0") for part in prerelease):
+        raise ValueError("OMP_VERSION numeric prerelease identifiers must not have leading zeroes")
+    registry = load_json(REGISTRY_PATH.read_text().replace("${OMP_VERSION}", version))
+    validate(registry, require_omp=True)
     for tool in registry["tools"]:
+        if tool["providerId"] != PROVIDER_ID:
+            continue
         if image is not None:
             tool["injectorImage"] = image
         if tag is not None:
@@ -162,7 +173,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
     check = commands.add_parser("validate")
-    check.add_argument("path", nargs="?", type=Path, default=REGISTRY_PATH)
+    check.add_argument("path", nargs="?", type=Path)
     rendered = commands.add_parser("render")
     rendered.add_argument("--image", required=True)
     rendered.add_argument("--tag")
@@ -177,7 +188,10 @@ def main(argv=None):
     args = parser.parse_args(argv)
     try:
         if args.command == "validate":
-            validate(load_json(args.path.read_text()), require_omp=True)
+            if args.path is None:
+                render()
+            else:
+                validate(load_json(args.path.read_text()), require_omp=True)
             print("Registry is valid")
         elif args.command == "render":
             print(dumps(render(args.image, args.tag)), end="")

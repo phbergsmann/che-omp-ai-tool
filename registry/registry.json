@@ -11,12 +11,12 @@
   "tools": [
     {
       "providerId": "oh-my-pi/omp",
-      "tag": "v0.1.0",
+      "tag": "${OMP_VERSION}",
       "name": "Oh My Pi",
       "url": "https://github.com/can1357/oh-my-pi",
       "binary": "omp",
       "pattern": "init",
-      "injectorImage": "ghcr.io/phbergsmann/che-omp-ai-tool:v0.1.0",
+      "injectorImage": "ghcr.io/phbergsmann/che-omp-ai-tool:${OMP_VERSION}",
       "arch": [
         "x86_64",
         "arm64"

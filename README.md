@@ -13,16 +13,15 @@ native-library and writable-home requirements.
 
 ## Install
 
-Use an image you have built/published, or a release image once a release has been
-published. The committed registry describes integration `v0.1.0`; committing that
-reference does not itself publish a GHCR image.
+Release tags and image versions follow OMP: `OMP_VERSION` set to `v18.11.1`
+means release and image tag `v18.11.1`. The registry template derives its defaults
+from that file; use an image you built or a published release. The earlier
+`v0.1.0` release remains historical and is not rewritten.
 
 ```sh
 python3 scripts/registry.py validate
-python3 scripts/registry.py install --namespace eclipse-che \
-  --image ghcr.io/phbergsmann/che-omp-ai-tool:v0.1.0 --dry-run
-python3 scripts/registry.py install --namespace eclipse-che \
-  --image ghcr.io/phbergsmann/che-omp-ai-tool:v0.1.0
+python3 scripts/registry.py install --namespace eclipse-che --dry-run
+python3 scripts/registry.py install --namespace eclipse-che
 ```
 
 For Dev Spaces use `--namespace openshift-devspaces`. Explicit namespaces are
@@ -52,14 +51,17 @@ CONTAINER_ENGINE=podman bash scripts/test-image.sh
 
 Install the lint tools/versions listed in the CI workflow before running the
 static checks locally. Container verification needs a running Docker or Podman
-engine. `OMP_VERSION` is the single upstream-version source. Integration releases
-have a separate version, selected by the repository release tag.
+engine. `OMP_VERSION` is the canonical build, registry, and release version.
+Release tags must match it exactly; OCI revision metadata identifies the
+integration's source commit.
 
 Pull requests run static checks before one native-architecture image build/test.
 They do not run QEMU, multi-architecture publishing, supply-chain release jobs,
 or cluster E2E. [Release automation](docs/releases.md) builds both architectures,
 produces SBOM/provenance, signs images, and publishes digest-pinned registry
-artifacts. Renovate proposes upstream release updates without automatic merging.
+artifacts. The scheduled/manual [Renovate workflow](docs/renovate.md) proposes
+upstream updates without automatic merging. Configure its dedicated
+`RENOVATE_TOKEN` repository secret before enabling bot runs.
 
 [Manual E2E procedures](docs/e2e.md) cover actual dashboard selection, injection,
 restart, upgrade, restricted OpenShift security, and diagnostic capture. Run

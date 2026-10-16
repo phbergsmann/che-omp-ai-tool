@@ -4,6 +4,7 @@ import io
 import json
 from pathlib import Path
 import unittest
+import tempfile
 from contextlib import redirect_stderr, redirect_stdout
 from unittest.mock import patch
 
@@ -34,6 +35,50 @@ class RegistryTests(unittest.TestCase):
         self.assertEqual(result["tools"][0]["injectorImage"], digest)
         self.assertEqual(result["tools"][0]["tag"], "development")
         self.assertEqual(registry.render("private.local:5000/team/omp:dev")["tools"][0]["binary"], "omp")
+
+    def test_version_file_drives_defaults_without_template_changes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            version = Path(directory) / "OMP_VERSION"
+            with patch.object(registry, "OMP_VERSION_PATH", version):
+                for value in ("v18.11.1", "v19.2.3", "v19.0.0-rc.1"):
+                    version.write_text(value + "\n")
+                    tool = registry.render()["tools"][0]
+                    self.assertEqual(tool["tag"], value)
+                    self.assertEqual(tool["injectorImage"], f"ghcr.io/phbergsmann/che-omp-ai-tool:{value}")
+
+    def test_validate_default_renders_but_explicit_path_does_not(self):
+        status, _, err, _ = self.invoke(["validate"], [])
+        self.assertEqual(status, 0, err)
+        with tempfile.TemporaryDirectory() as directory:
+            supplied = Path(directory) / "registry.json"
+            supplied.write_text(registry.dumps(self.desired))
+            status, _, err, _ = self.invoke(["validate", str(supplied)], [])
+            self.assertEqual(status, 0, err)
+            supplied.write_text(registry.REGISTRY_PATH.read_text())
+            status, _, _, _ = self.invoke(["validate", str(supplied)], [])
+            self.assertEqual(status, 1)
+            for invalid in ("{", '{"providers":[],"tools":{},"defaultAiProviders":[]}'):
+                supplied.write_text(invalid)
+                with self.subTest(invalid=invalid), patch.object(registry, "REGISTRY_PATH", supplied):
+                    self.assertEqual(self.invoke(["validate"], [])[0], 1)
+                    self.assertEqual(self.invoke(["validate", str(supplied)], [])[0], 1)
+
+    def test_render_rejects_invalid_version_and_does_not_expand_environment(self):
+        with tempfile.TemporaryDirectory() as directory:
+            version = Path(directory) / "OMP_VERSION"
+            template = Path(directory) / "registry.json"
+            with patch.object(registry, "OMP_VERSION_PATH", version):
+                for invalid in ("not-a-version", "v01.2.3", "v1.02.3", "v1.2.03", "v1.2.3-rc.01"):
+                    version.write_text(invalid + "\n")
+                    with self.subTest(version=invalid), self.assertRaisesRegex(ValueError, "OMP_VERSION"):
+                        registry.render()
+                version.write_text("v18.11.1\n")
+                bad = copy.deepcopy(self.desired)
+                bad["tools"][0]["injectorImage"] = "example.com/omp:${SECRET}"
+                template.write_text(registry.dumps(bad))
+                with patch.object(registry, "REGISTRY_PATH", template), patch.dict("os.environ", {"SECRET": "private"}):
+                    with self.assertRaises(ValueError):
+                        registry.render()
 
     def test_missing_registry_and_empty_configmap(self):
         result = registry.merge(None, "openshift-devspaces", self.desired)

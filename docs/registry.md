@@ -1,7 +1,10 @@
 # Che AI tool registry
 
-The canonical definition is [`registry/registry.json`](../registry/registry.json).
-It uses the current [Che AI provider schema](https://raw.githubusercontent.com/eclipse-che/che-docs/main/modules/extend/pages/configuring-ai-providers.adoc):
+The canonical source template is [`registry/registry.json`](../registry/registry.json).
+It is valid JSON, but its `${OMP_VERSION}` markers must be rendered before
+deployment; do not install the committed JSON directly. Rendering substitutes
+only that known marker using [`OMP_VERSION`](../OMP_VERSION), never arbitrary
+environment variables. It uses the current [Che AI provider schema](https://raw.githubusercontent.com/eclipse-che/che-docs/main/modules/extend/pages/configuring-ai-providers.adoc):
 `providers`, `tools`, and `defaultAiProviders`. The same schema and discovery labels
 apply to Eclipse Che and Red Hat OpenShift Dev Spaces.
 
@@ -19,8 +22,11 @@ backends. Installing a new tag replaces this integration's previous variants.
 The binary is `omp`, the injection pattern is `init`, and supported node
 architectures are explicitly `x86_64` and `arm64`. The injector copies its single
 binary into `/injected-tools/bin`; no companion wrapper/runtime file is required.
-The default image is `ghcr.io/phbergsmann/che-omp-ai-tool:v0.1.0`. Its integration
-release tag is distinct from upstream OMP's version in `OMP_VERSION`.
+The default image and Che tool tag derive from `OMP_VERSION`: currently
+`ghcr.io/phbergsmann/che-omp-ai-tool:v18.11.1` and `v18.11.1`. The image version
+matches upstream OMP; there is no separate integration release version.
+`org.opencontainers.image.revision` identifies the integration's Git revision.
+Use an image digest for immutable deployments rather than a moving alias.
 
 OMP is not selected by default (`defaultAiProviders` is empty in the canonical
 entry). There is no `envVarName`, backend key, or model credential in this registry
@@ -34,12 +40,15 @@ Only Python 3's standard library is required for local validation and rendering:
 
 ```sh
 python3 scripts/registry.py validate
-python3 scripts/registry.py validate registry/registry.json
+python3 scripts/registry.py render --image registry.example.com/team/omp:dev > /tmp/omp-registry.json
+python3 scripts/registry.py validate /tmp/omp-registry.json
 python3 scripts/registry.py render --image registry.example.com/team/omp:dev --tag dev
 ```
 
+Default `validate` renders and validates the canonical template. An explicit path
+validates the supplied JSON as-is, without template expansion.
 Image references require an explicit tag or a `sha256` digest. `--tag` controls the
-Che tool tag independently of the image tag. Omit it to retain `v0.1.0`.
+Che tool tag independently of the image tag. Omit it to use `OMP_VERSION`.
 
 Install requires an authenticated `kubectl` context with ConfigMap list/create/update
 permissions in the **Che installation namespace**, not a developer workspace
@@ -112,7 +121,8 @@ Run the standard-library tests from the repository root:
 python3 -m unittest discover -s test -p 'test_registry.py' -v
 ```
 
-Tests cover discovery, creation, empty registries, foreign-data preservation,
+Tests cover version-file-driven defaults, canonical template rendering, explicit
+file validation, discovery, creation, empty registries, foreign-data preservation,
 idempotence, upgrades, uninstall, malformed registries, image overrides, strict
 OMP validation, dry runs, optimistic concurrency, and error propagation without
 cluster writes.

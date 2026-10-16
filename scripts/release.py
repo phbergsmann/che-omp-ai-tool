@@ -10,6 +10,7 @@ import urllib.parse
 import urllib.request
 from dataclasses import dataclass
 from functools import total_ordering
+from pathlib import Path
 
 
 @total_ordering
@@ -67,6 +68,12 @@ def moving_tags(version, existing):
         ("latest", lambda v: True),
     ]
     return [tag for tag, belongs in lines if all(candidate > v for v in stable if belongs(v))]
+
+
+def validate_release_version(version, upstream):
+    Version.parse(upstream)
+    if version != upstream:
+        raise ValueError(f"Release tag {version!r} must match OMP_VERSION {upstream!r}")
 
 
 class Registry:
@@ -127,7 +134,11 @@ def main():
     parser.add_argument("--image", required=True)
     parser.add_argument("--github-output")
     args = parser.parse_args()
-    Version.parse(args.version)
+    try:
+        upstream = (Path(__file__).resolve().parents[1] / "OMP_VERSION").read_text().strip()
+        validate_release_version(args.version, upstream)
+    except (ValueError, OSError) as error:
+        parser.error(str(error))
     registry = Registry(args.image)
     registry.ensure_absent(args.version)
     result = {"version": args.version, "image": args.image,

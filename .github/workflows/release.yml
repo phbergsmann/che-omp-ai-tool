@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: Existing integration tag (vX.Y.Z or vX.Y.Z-prerelease)
+        description: Existing OMP tag matching OMP_VERSION (for example v18.11.1)
         required: true
         type: string
 permissions:
@@ -43,6 +43,7 @@ jobs:
           GHCR_TOKEN: ${{ github.token }}
         run: |
           test "$(git rev-parse HEAD)" = "$(git rev-parse "refs/tags/$RELEASE_VERSION^{commit}")"
+          test "$RELEASE_VERSION" = "$(cat OMP_VERSION)"
           python3 scripts/release.py --version "$RELEASE_VERSION" --image "$IMAGE" --github-output "$GITHUB_OUTPUT"
           echo "omp_version=$(cat OMP_VERSION)" >> "$GITHUB_OUTPUT"
           echo "vcs_ref=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
@@ -79,7 +80,6 @@ jobs:
         env:
           CONTAINER_ENGINE: docker
           IMAGE: che-omp-ai-tool:ci
-          INTEGRATION_VERSION: ${{ needs.preflight.outputs.version }}
           VCS_REF: ${{ needs.preflight.outputs.revision }}
         run: |
           sh scripts/build-image.sh
@@ -95,7 +95,6 @@ jobs:
           sbom: true
           provenance: mode=max
           build-args: |
-            INTEGRATION_VERSION=${{ needs.preflight.outputs.version }}
             OMP_VERSION=${{ needs.preflight.outputs.omp-version }}
             VCS_REF=${{ needs.preflight.outputs.revision }}
       - name: Execute exact published image and scan natively
@@ -184,7 +183,7 @@ jobs:
       - name: Publish digest-pinned registry and release output
         env:
           DIGEST: ${{ steps.manifest.outputs.digest }}
-          OMP_VERSION: ${{ needs.preflight.outputs.omp-version }}
+          SOURCE_REVISION: ${{ needs.preflight.outputs.revision }}
         run: |
           python3 scripts/registry.py render --image "$IMAGE@$DIGEST" --tag "$RELEASE_VERSION" > registry.json
           printf '%s\n' "$IMAGE@$DIGEST" > image-digest.txt
@@ -194,4 +193,4 @@ jobs:
             gh release create "$RELEASE_VERSION" --repo "$GITHUB_REPOSITORY" --verify-tag --title "$RELEASE_VERSION" --notes "Injector image: $IMAGE@$DIGEST" "${extra[@]}"
           fi
           gh release upload "$RELEASE_VERSION" registry.json image-digest.txt --repo "$GITHUB_REPOSITORY"
-          printf "### Published image\n\n\`%s@%s\`\n\nIntegration: \`%s\`; OMP: \`%s\`\n" "$IMAGE" "$DIGEST" "$RELEASE_VERSION" "$OMP_VERSION" >> "$GITHUB_STEP_SUMMARY"
+          printf "### Published image\n\n\`%s@%s\`\n\nOMP release: \`%s\`; source revision: \`%s\`\n" "$IMAGE" "$DIGEST" "$RELEASE_VERSION" "$SOURCE_REVISION" >> "$GITHUB_STEP_SUMMARY"
