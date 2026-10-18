@@ -3,7 +3,7 @@ on:
   push:
     branches: [main]
   schedule:
-    - cron: '23 */6 * * *'
+    - cron: '*/15 * * * *'
   workflow_dispatch:
     inputs:
       dry-run:
@@ -14,7 +14,7 @@ permissions:
   contents: read
 concurrency:
   group: renovate
-  cancel-in-progress: false
+  cancel-in-progress: true
 jobs:
   renovate:
     runs-on: ubuntu-24.04
