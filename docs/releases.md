@@ -16,7 +16,9 @@ and normally ship with the next upstream release.
 
 The scheduled/manual [Renovate workflow](renovate.md) tracks official
 `can1357/oh-my-pi` GitHub releases and proposes changes to `OMP_VERSION`.
-No OMP upgrade is automatically merged. Updates use ordinary lightweight PR CI:
+All OMP upgrades, including majors, use automerge after required CI checks pass.
+Patch and digest updates for other dependencies also automerge; their minor
+and major updates require manual merging. Updates use ordinary lightweight PR CI:
 static/registry validation and one native image build with `omp --version`.
 Dependency-update PRs cannot publish or run cluster E2E.
 
