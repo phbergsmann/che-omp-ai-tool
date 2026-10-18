@@ -22,7 +22,7 @@ env:
 jobs:
   preflight:
     if: github.event_name == 'push' || github.ref == 'refs/heads/main'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     environment: release
     permissions:
       contents: write
@@ -142,7 +142,7 @@ jobs:
           retention-days: 7
   publish:
     needs: [preflight, platform]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     environment: release
     permissions:
       contents: write
