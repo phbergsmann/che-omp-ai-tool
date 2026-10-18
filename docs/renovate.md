@@ -11,7 +11,11 @@ fetches the repository and its `renovate.json` itself.
 ## Activate once on the default branch
 
 1. Install the dedicated GitHub App on this repository. Grant repository
-   **Contents: read and write** and **Pull requests: read and write**.
+   **Contents: read and write**, **Pull requests: read and write**, and
+   **Issues: read-only**. Renovate 44.164.10 queries repository issues during
+   initialization even with the dependency dashboard disabled; without read
+   access, GitHub rejects `repository.issues` with
+   `Resource not accessible by integration`.
    Also grant **Workflows: write**, because the GitHub Actions manager updates
    `.github/workflows/` files. Contents read-only is insufficient for creating
    dependency-update branches. Approve changed permissions on the installation.

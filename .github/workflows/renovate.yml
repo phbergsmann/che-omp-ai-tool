@@ -37,6 +37,7 @@ jobs:
           repositories: ${{ github.event.repository.name }}
           permission-contents: write
           permission-pull-requests: write
+          permission-issues: read
           permission-workflows: write
       - name: Configure the App bot commit identity
         env:
@@ -56,7 +57,7 @@ jobs:
           token: ${{ steps.app-token.outputs.token }}
           renovate-version: 44.164.10
         env:
-          LOG_LEVEL: debug
+          LOG_LEVEL: info
           RENOVATE_PLATFORM: github
           RENOVATE_AUTODISCOVER: 'false'
           RENOVATE_REPOSITORIES: ${{ github.repository }}
