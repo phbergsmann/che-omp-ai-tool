@@ -38,6 +38,8 @@ jobs:
           permission-contents: write
           permission-pull-requests: write
           permission-issues: read
+          permission-checks: read
+          permission-statuses: read
           permission-workflows: write
       - name: Configure the App bot commit identity
         env:

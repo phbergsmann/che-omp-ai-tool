@@ -16,6 +16,9 @@ fetches the repository and its `renovate.json` itself.
    initialization even with the dependency dashboard disabled; without read
    access, GitHub rejects `repository.issues` with
    `Resource not accessible by integration`.
+   Grant **Commit statuses: read-only** and **Checks: read-only** so Renovate
+   can evaluate commit statuses and GitHub Actions check runs for automerge.
+   Without status access, `getBranchStatus` fails with `integration-unauthorized`.
    Also grant **Workflows: write**, because the GitHub Actions manager updates
    `.github/workflows/` files. Contents read-only is insufficient for creating
    dependency-update branches. Approve changed permissions on the installation.
