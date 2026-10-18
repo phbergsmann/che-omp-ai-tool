@@ -83,12 +83,12 @@ OMP PRs run the normal validation/native-image CI; they neither publish images
 nor run cluster E2E. Publishing remains a separately approved release operation
 using the upstream OMP tag. There is no independent integration release version.
 
-Renovate retains its default limits: two new PRs per hour and ten open PRs.
-A dry run lists candidate branches without creating them; it is not a promise
-that one live run will open every candidate PR. Remaining updates are queued
-for later runs. This workflow runs every six hours, so it does not continuously
-drain the hourly allowance. Limits are documented in the
-[Renovate configuration reference](https://docs.renovatebot.com/configuration-options/#prhourlylimit).
+Renovate has no hourly PR creation limit or concurrent PR/branch limit:
+`prHourlyLimit` and `prConcurrentLimit` are both `0`; the branch limit inherits
+the unlimited PR limit. A live run can open all eligible updates without
+waiting for hourly slots. GitHub API and Actions capacity limits still apply.
+The workflow runs every six hours and can also be dispatched manually.
+A dry run lists candidate branches without creating them.
 
 ## Read-only runtime diagnosis
 
