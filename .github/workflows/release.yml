@@ -164,7 +164,7 @@ jobs:
           echo "digest=$digest" >> "$GITHUB_OUTPUT"
       - uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3
         with:
-          cosign-release: v2.4.3
+          cosign-release: v2.6.5
       - name: Sign immutable manifest using GitHub OIDC
         env:
           DIGEST: ${{ steps.manifest.outputs.digest }}
