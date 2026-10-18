@@ -56,6 +56,7 @@ jobs:
           token: ${{ steps.app-token.outputs.token }}
           renovate-version: 44.164.10
         env:
+          LOG_LEVEL: debug
           RENOVATE_PLATFORM: github
           RENOVATE_AUTODISCOVER: 'false'
           RENOVATE_REPOSITORIES: ${{ github.repository }}
