@@ -18,7 +18,7 @@ fetches the repository and its `renovate.json` itself.
    The workflow requests exactly these permissions and scopes its token to this
    repository, even if the App is installed on other repositories.
 2. Under repository **Settings → Secrets and variables → Actions**, configure:
-   - Repository variable **`RENOVATE_APP_CLIENT_ID`**: the App's Client ID,
+   - Repository secret **`RENOVATE_APP_CLIENT_ID`**: the App's Client ID,
      available in its GitHub App settings (not its installation ID).
    - Repository secret **`RENOVATE_APP_PRIVATE_KEY`**: a generated PEM private
      key for that App, including its BEGIN/END lines.

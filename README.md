@@ -61,8 +61,8 @@ or cluster E2E. [Release automation](docs/releases.md) builds both architectures
 produces SBOM/provenance, signs images, and publishes digest-pinned registry
 artifacts. The scheduled/manual [Renovate workflow](docs/renovate.md) proposes
 upstream updates without automatic merging. Configure `RENOVATE_APP_CLIENT_ID`
-as a repository variable and `RENOVATE_APP_PRIVATE_KEY` as an Actions secret;
-the workflow generates a fresh, repository-scoped GitHub App token for each run.
+and `RENOVATE_APP_PRIVATE_KEY` as repository Actions secrets; the workflow
+generates a fresh, repository-scoped GitHub App token for each run.
 
 [Manual E2E procedures](docs/e2e.md) cover actual dashboard selection, injection,
 restart, upgrade, restricted OpenShift security, and diagnostic capture. Run
