@@ -57,9 +57,10 @@ integration's source commit.
 
 Pull requests run static checks before one native-architecture image build/test.
 They do not run QEMU, multi-architecture publishing, supply-chain release jobs,
-or cluster E2E. [Release automation](docs/releases.md) builds both architectures,
-produces SBOM/provenance, signs images, and publishes digest-pinned registry
-artifacts. The scheduled/manual [Renovate workflow](docs/renovate.md) proposes
+or cluster E2E. Changes to `OMP_VERSION` on `main` automatically tag the exact
+commit and start [release automation](docs/releases.md), which builds both
+architectures, produces SBOM/provenance, signs images, and publishes digest-pinned
+registry artifacts. The [Renovate workflow](docs/renovate.md) proposes
 upstream updates and automerges OMP updates of any size, plus patch and digest
 updates for other dependencies, after required CI checks pass. Other minor
 and major updates require manual merging.

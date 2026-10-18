@@ -81,8 +81,10 @@ require manual merging. Existing recommended managers also maintain
 dependencies such as GitHub Actions pins.
 
 OMP PRs run the normal validation/native-image CI; they neither publish images
-nor run cluster E2E. Publishing remains a separately approved release operation
-using the upstream OMP tag. There is no independent integration release version.
+nor run cluster E2E. Once merged, an `OMP_VERSION` change on `main` triggers
+tagging of that exact commit and the full [release workflow](releases.md).
+Existing release-environment approval rules still apply. There is no independent
+integration release version.
 
 Renovate has no hourly PR creation limit or concurrent PR/branch limit:
 `prHourlyLimit` and `prConcurrentLimit` are both `0`; the branch limit inherits
