@@ -18,21 +18,42 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
-      - name: Require dedicated Renovate credential
+      - name: Require GitHub App configuration
         env:
-          RENOVATE_TOKEN: ${{ secrets.RENOVATE_TOKEN }}
+          APP_CLIENT_ID: ${{ vars.RENOVATE_APP_CLIENT_ID }}
+          APP_PRIVATE_KEY: ${{ secrets.RENOVATE_APP_PRIVATE_KEY }}
         run: |
-          if [ -z "$RENOVATE_TOKEN" ]; then
-            echo '::error::Set repository Actions secret RENOVATE_TOKEN to a dedicated fine-grained PAT or a freshly issued GitHub App installation token. See docs/renovate.md; do not use GITHUB_TOKEN.'
+          if [ -z "$APP_CLIENT_ID" ] || [ -z "$APP_PRIVATE_KEY" ]; then
+            echo '::error::Configure RENOVATE_APP_CLIENT_ID as a repository variable and RENOVATE_APP_PRIVATE_KEY as an Actions secret. See docs/renovate.md.'
             exit 1
           fi
+      - name: Create repository-scoped App installation token
+        id: app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3
+        with:
+          client-id: ${{ vars.RENOVATE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RENOVATE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          permission-contents: write
+          permission-pull-requests: write
+          permission-workflows: write
+      - name: Configure the App bot commit identity
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+        run: |
+          bot="${APP_SLUG}[bot]"
+          bot_id=$(gh api "users/$bot" --jq .id)
+          echo "RENOVATE_USERNAME=$bot" >> "$GITHUB_ENV"
+          echo "RENOVATE_GIT_AUTHOR=$bot <$bot_id+$bot@users.noreply.github.com>" >> "$GITHUB_ENV"
       - name: Enable read-only manual run
         if: github.event_name == 'workflow_dispatch' && inputs.dry-run
         run: echo 'RENOVATE_DRY_RUN=full' >> "$GITHUB_ENV"
       - name: Run self-hosted Renovate
         uses: renovatebot/github-action@f0f41e5f2e706165f6814b1d0f0d0e319de7d1d9 # v46.3.8
         with:
-          token: ${{ secrets.RENOVATE_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           renovate-version: 44.164.10
         env:
           RENOVATE_PLATFORM: github

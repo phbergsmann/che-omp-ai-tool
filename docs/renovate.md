@@ -10,39 +10,45 @@ fetches the repository and its `renovate.json` itself.
 
 ## Activate once on the default branch
 
-1. Create a dedicated fine-grained PAT for the repository owner, selecting only
-   this repository. Grant repository **Contents: read and write** and
-   **Pull requests: read and write** (Metadata read access is implicit).
-   Also grant **Workflows: read and write**, because the existing GitHub Actions
-   manager can update `.github/workflows/` files. No organization-wide access,
-   administration, package write, or Issues write permission is required.
-   The dependency dashboard is disabled so the bot does not need to create issues.
-   Use an explicit expiration and rotate the token before it expires.
-2. Save this purpose-created credential as repository **Settings → Secrets and
-   variables → Actions → New repository secret → `RENOVATE_TOKEN`**.
-   Do not copy the developer workstation's `gh` credential into repository
-   secrets. The workflow fails clearly if the secret is absent.
-3. Disable/remove this repository from the hosted Renovate GitHub App before
-   enabling the self-hosted schedule, to avoid two bots maintaining duplicate
-   branches and PRs. Keep other repositories' App installations unchanged.
-4. Merge the workflow and configuration to the default branch and ensure
-   repository Actions are enabled. Scheduled workflows run only from that branch;
-   GitHub may delay scheduled runs. Manually run **Renovate** with the default
-   **dry-run** checkbox enabled first and inspect its logs. Uncheck it to allow
-   branch and PR creation. Subsequent scheduled runs are live runs.
+1. Install the dedicated GitHub App on this repository. Grant repository
+   **Contents: read and write** and **Pull requests: read and write**.
+   Also grant **Workflows: write**, because the GitHub Actions manager updates
+   `.github/workflows/` files. Contents read-only is insufficient for creating
+   dependency-update branches. Approve changed permissions on the installation.
+   The workflow requests exactly these permissions and scopes its token to this
+   repository, even if the App is installed on other repositories.
+2. Under repository **Settings → Secrets and variables → Actions**, configure:
+   - Repository variable **`RENOVATE_APP_CLIENT_ID`**: the App's Client ID,
+     available in its GitHub App settings (not its installation ID).
+   - Repository secret **`RENOVATE_APP_PRIVATE_KEY`**: a generated PEM private
+     key for that App, including its BEGIN/END lines.
+   Never paste the private key into chat, commit it, or reuse a workstation PAT.
+   A static `RENOVATE_TOKEN` secret is no longer used.
+3. Disable this repository in any separately hosted Renovate installation to
+   avoid duplicate bot runs. Keep other repositories unchanged. The dependency
+   dashboard remains disabled; this configuration does not request Issues write
+   permission or enable automerge.
+4. Merge the workflow to the default branch and ensure Actions are enabled.
+   First run **Actions → Renovate → Run workflow** with **dry-run** checked.
+   After successful token creation and read-only repository processing, uncheck
+   it to create update branches/PRs. Scheduled six-hourly runs are live runs;
+   GitHub may delay schedules.
 
-A GitHub App installation token with equivalent repository permissions can also
-be supplied as `RENOVATE_TOKEN`, with the App installed only on this repository.
-Installation tokens expire after about one hour: a static secret containing one
-is suitable only for an immediate run, not an unattended schedule. For durable
-App-based operation an administrator must arrange fresh token issuance before
-each run (rather than storing the App private key in `RENOVATE_TOKEN`). The
-workflow as committed uses the dedicated PAT for unattended operation.
+The pinned `actions/create-github-app-token` action mints a new installation
+token for every run. It expires after about one hour and is revoked by the
+action's post-job cleanup; the job timeout is 30 minutes. The workflow looks up
+the App's bot account ID and sets Renovate's username and Git commit author to
+that identity instead of impersonating a generic Renovate account.
+
+Keep the private key active and rotate it through the repository secret when
+needed. Missing credentials fail before Renovate starts. A token request also
+fails if installation access or any requested permission is absent; App
+installation alone does not supply the workflow's credentials.
 
 The job's built-in `GITHUB_TOKEN` has only Contents read permission. It is not
 the Renovate credential: PR events created using `GITHUB_TOKEN` do not
 immediately trigger the normal CI workflow (GitHub may offer manual approval
-instead). The separate PAT/App token lets Renovate PRs trigger CI normally.
+instead). The App installation token lets Renovate PRs trigger CI normally.
 Renovate's GitHub platform authentication supplies the GitHub datasource token,
 so an additional `github.com` host rule is not needed. In particular, do not
 install a broad read-only host rule that overrides the bot's write credential.
@@ -89,12 +95,13 @@ RENOVATE_TOKEN="$(gh auth token --hostname github.com)" \
   phbergsmann/che-omp-ai-tool
 ```
 
-The host login is only a temporary diagnostic credential; production must use
-the dedicated secret above. Do not remove `--dry-run=full` from this command.
-Remote lookup cannot validate unmerged local configuration; use the local
-command for that. The manual workflow's dry-run input provides the same full
-read-only behavior with the configured dedicated secret.
+The host login is only a temporary diagnostic credential; production uses the
+fresh App token described above. Do not remove `--dry-run=full` from this
+command. Remote lookup cannot validate unmerged local configuration; use the
+local command for that. The manual workflow dry run also exercises the App's
+actual credentials and installation permissions.
 
 References: [official action setup and token requirements](https://github.com/renovatebot/github-action/blob/v46.3.8/README.md),
+[GitHub App token action and scoped permissions](https://github.com/actions/create-github-app-token/blob/64ab729a6294000f5aa4a4bc0b73d1f32bc45510/README.md),
 [Renovate self-hosted configuration and dry runs](https://docs.renovatebot.com/self-hosted-configuration/),
 [GitHub platform authentication](https://docs.renovatebot.com/modules/platform/github/).
