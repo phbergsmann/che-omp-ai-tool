@@ -60,7 +60,9 @@ They do not run QEMU, multi-architecture publishing, supply-chain release jobs,
 or cluster E2E. [Release automation](docs/releases.md) builds both architectures,
 produces SBOM/provenance, signs images, and publishes digest-pinned registry
 artifacts. The scheduled/manual [Renovate workflow](docs/renovate.md) proposes
-upstream updates without automatic merging. Configure `RENOVATE_APP_CLIENT_ID`
+upstream updates and automerges OMP-only PRs after required CI checks pass,
+including major upgrades. Other dependencies require manual merging.
+Configure `RENOVATE_APP_CLIENT_ID`
 and `RENOVATE_APP_PRIVATE_KEY` as repository Actions secrets; the workflow
 generates a fresh, repository-scoped GitHub App token for each run.
 

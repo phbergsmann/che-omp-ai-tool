@@ -31,12 +31,17 @@ fetches the repository and its `renovate.json` itself.
 3. Disable this repository in any separately hosted Renovate installation to
    avoid duplicate bot runs. Keep other repositories unchanged. The dependency
    dashboard remains disabled; this configuration does not request Issues write
-   permission or enable automerge.
+   permission.
 4. Merge the workflow to the default branch and ensure Actions are enabled.
    First run **Actions → Renovate → Run workflow** with **dry-run** checked.
    After successful token creation and read-only repository processing, uncheck
    it to create update branches/PRs. Scheduled six-hourly runs are live runs;
    GitHub may delay schedules.
+5. Enable **Allow auto-merge** in repository settings. Protect `main` with
+   required `static` and `native-image` checks and require branches to be
+   up to date before merging. These gates must exist before enabling OMP
+   automerge: platform-native automerge relies on GitHub's required checks,
+   not merely the presence of CI workflows.
 
 The pinned `actions/create-github-app-token` action mints a new installation
 token for every run. It expires after about one hour and is revoked by the
@@ -64,12 +69,23 @@ versions from the `github-releases` datasource for `can1357/oh-my-pi`.
 An OMP update changes that one canonical version file, not duplicated version
 strings elsewhere. PR titles include both old and new versions, for example
 `Update OMP from v18.11.1 to v18.12.0`. All OMP updates, including majors,
-require review; OMP automerge is explicitly disabled. Existing recommended
-managers also maintain other dependencies such as GitHub Actions pins.
+use GitHub's native squash automerge after the required `static` and
+`native-image` checks pass on an up-to-date branch. This explicitly accepts
+major-update compatibility risk beyond the smoke coverage. Only the exact
+dependency `can1357/oh-my-pi` is opted in; other dependency PRs require manual
+merging. Existing recommended managers also maintain dependencies such as
+GitHub Actions pins.
 
 OMP PRs run the normal validation/native-image CI; they neither publish images
 nor run cluster E2E. Publishing remains a separately approved release operation
 using the upstream OMP tag. There is no independent integration release version.
+
+Renovate retains its default limits: two new PRs per hour and ten open PRs.
+A dry run lists candidate branches without creating them; it is not a promise
+that one live run will open every candidate PR. Remaining updates are queued
+for later runs. This workflow runs every six hours, so it does not continuously
+drain the hourly allowance. Limits are documented in the
+[Renovate configuration reference](https://docs.renovatebot.com/configuration-options/#prhourlylimit).
 
 ## Read-only runtime diagnosis
 
