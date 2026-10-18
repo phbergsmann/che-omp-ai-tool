@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   static:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     outputs:
       image-changed: ${{ steps.changes.outputs.image-changed }}
     steps:
@@ -43,7 +43,7 @@ jobs:
   native-image:
     needs: static
     if: needs.static.outputs.image-changed == 'true'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     env:
       CONTAINER_ENGINE: docker
       IMAGE: che-omp-ai-tool:ci
