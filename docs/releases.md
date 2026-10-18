@@ -55,7 +55,19 @@ packages, grant this repository Actions access to the package in GHCR settings.
 The workflow authenticates pulls, pushes and scans with `GITHUB_TOKEN`; no
 long-lived registry credential is needed.
 
-Create and push an annotated release tag matching `OMP_VERSION` on reviewed code:
+When a push to `main` changes `OMP_VERSION`, the Release workflow checks out
+that exact pushed commit, validates the version, creates and pushes an annotated
+matching tag, then publishes in the same run. It never tags a later `main` tip.
+An existing tag is accepted only if it resolves to the same commit; a different
+target fails without moving the tag. The preflight job needs Contents write
+permission and permission to create matching tags under repository rules.
+
+Tag creation uses the job's short-lived `GITHUB_TOKEN`. Its push does not
+trigger another workflow, so the originating run continues through all release
+gates itself. No additional App secret is needed. Existing `release` environment
+approval rules still apply before tagging/building and publication.
+
+Manual tag pushes remain supported on reviewed code:
 
 ```sh
 version=$(cat OMP_VERSION)
@@ -63,13 +75,16 @@ git tag -a "$version" -m "OMP $version"
 git push origin "$version"
 ```
 
-Alternatively, run the Release workflow manually **from `main`**, supplying an
-already existing OMP-aligned tag. Publication only runs for tag pushes or this
-trusted manual context. Stable tags and SemVer prereleases are accepted only
-when they exactly match `OMP_VERSION`; build metadata is unsupported because OCI
-tags cannot contain `+`.
+Alternatively, run Release manually **from `main`**. Leave `version` empty to
+tag and release the commit selected by that dispatch (including an upgrade
+merged before this automation was installed). Supply an already existing tag
+for recovery. Stable tags and SemVer prereleases are accepted only when they
+exactly match `OMP_VERSION`; build metadata is unsupported because OCI tags
+cannot contain `+`.
 
 Releases serialize globally so different version lines cannot race promotion.
+`queue: max` retains up to GitHub's limit of 100 pending runs, rather than
+replacing an older pending version when another update arrives.
 The authenticated GHCR API is paginated and checked before building: an existing
 full-version manifest is an error, never overwritten. Do not publish these
 image tags outside this workflow, which would bypass its serialization and
