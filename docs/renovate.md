@@ -1,9 +1,10 @@
 # Self-hosted Renovate
 
-[The Renovate workflow](../.github/workflows/renovate.yml) runs every six hours
-(at minute 23, UTC) and on **Actions → Renovate → Run workflow**. It is scoped
-to the current repository, never discovers other repositories, and has no push
-or pull-request trigger. A single concurrency group prevents overlapping runs.
+[The Renovate workflow](../.github/workflows/renovate.yml) runs on pushes to
+`main`, every six hours (at minute 23, UTC), and on
+**Actions → Renovate → Run workflow**. It is scoped to the current repository,
+never discovers other repositories, and has no pull-request trigger.
+A single concurrency group prevents overlapping runs.
 The runner uses `renovatebot/github-action` v46.3.8, pinned to its commit, and
 `ghcr.io/renovatebot/renovate:44.164.10`. No local checkout is needed: Renovate
 fetches the repository and its `renovate.json` itself.
@@ -87,8 +88,17 @@ Renovate has no hourly PR creation limit or concurrent PR/branch limit:
 `prHourlyLimit` and `prConcurrentLimit` are both `0`; the branch limit inherits
 the unlimited PR limit. A live run can open all eligible updates without
 waiting for hourly slots. GitHub API and Actions capacity limits still apply.
-The workflow runs every six hours and can also be dispatched manually.
+Pushes to `main` trigger live runs; the six-hour schedule and manual dispatch
+also remain available.
 A dry run lists candidate branches without creating them.
+
+`rebaseWhen: "behind-base-branch"` explicitly updates stale Renovate branches
+on each run. Each merge into `main` wakes Renovate again, so eligible PRs can
+progress through rebase, CI, and automerge without waiting six hours.
+App-authored branch updates trigger normal PR CI. The up-to-date requirement
+and required checks remain enforced. Unlimited branches can cause substantial
+rebase/CI activity when many PRs are open. Real conflicts or branches Renovate
+cannot safely rewrite still require intervention.
 
 ## Read-only runtime diagnosis
 
