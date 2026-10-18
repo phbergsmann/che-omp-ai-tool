@@ -2,6 +2,8 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["config:recommended", "helpers:pinGitHubActionDigests"],
   "dependencyDashboard": false,
+  "prHourlyLimit": 0,
+  "prConcurrentLimit": 0,
   "automergeType": "pr",
   "automergeStrategy": "squash",
   "platformAutomerge": true,
