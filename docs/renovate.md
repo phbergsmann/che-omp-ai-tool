@@ -39,7 +39,7 @@ fetches the repository and its `renovate.json` itself.
    GitHub may delay schedules.
 5. Enable **Allow auto-merge** in repository settings. Protect `main` with
    required `static` and `native-image` checks and require branches to be
-   up to date before merging. These gates must exist before enabling OMP
+   up to date before merging. These gates must exist before enabling
    automerge: platform-native automerge relies on GitHub's required checks,
    not merely the presence of CI workflows.
 
@@ -71,10 +71,10 @@ strings elsewhere. PR titles include both old and new versions, for example
 `Update OMP from v18.11.1 to v18.12.0`. All OMP updates, including majors,
 use GitHub's native squash automerge after the required `static` and
 `native-image` checks pass on an up-to-date branch. This explicitly accepts
-major-update compatibility risk beyond the smoke coverage. Only the exact
-dependency `can1357/oh-my-pi` is opted in; other dependency PRs require manual
-merging. Existing recommended managers also maintain dependencies such as
-GitHub Actions pins.
+major-update compatibility risk beyond the smoke coverage. All dependencies
+also opt in for patch and digest updates. Other minor and major updates
+require manual merging. Existing recommended managers also maintain
+dependencies such as GitHub Actions pins.
 
 OMP PRs run the normal validation/native-image CI; they neither publish images
 nor run cluster E2E. Publishing remains a separately approved release operation
