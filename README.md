@@ -1,22 +1,36 @@
 # OMP for Eclipse Che and OpenShift Dev Spaces
 
-A standalone integration that injects the [Oh My Pi (`omp`) coding agent](https://github.com/can1357/oh-my-pi)
-into Che workspaces. No Autocode dependency, model credentials, or workspace-time
-package installation. Model configuration remains OMP's responsibility.
+Run the [Oh My Pi (`omp`) coding agent](https://github.com/can1357/oh-my-pi)
+in Eclipse Che and Red Hat OpenShift Dev Spaces workspaces.
 
-Both build and runtime stages use digest-pinned **Red Hat Hardened Images**
-(`hi/core-runtime`), not UBI. The injector contains an upstream standalone OMP
-executable; that binary is not Red Hat-built or certified. The registry uses
-`oh-my-pi/omp`, `binary: omp`, `pattern: init`, and explicitly supports x86_64 and
-arm64. OMP is not selected by default. See [image design](docs/injector.md) for
-native-library and writable-home requirements.
+The integration provides a container image and an AI tool registry entry. Che
+copies the standalone OMP executable into the workspace at startup, without
+installing packages in the workspace. Users select OMP in the dashboard and
+configure model providers and authentication through OMP.
 
-## Install
+## Features
 
-Release tags and image versions follow OMP: `OMP_VERSION` set to `v18.11.1`
-means release and image tag `v18.11.1`. The registry template derives its defaults
-from that file; use an image you built or a published release. The earlier
-`v0.1.0` release remains historical and is not rewritten.
+- Supports Linux x86_64 and ARM64 workspaces.
+- Uses digest-pinned Red Hat Hardened Images for the injector build and runtime.
+- Supports non-root execution and OpenShift's arbitrary user IDs.
+- Installs, upgrades, and removes the OMP registry entry while preserving other
+  providers and administrator defaults.
+- Publishes versioned multi-architecture images and digest-pinned registry assets.
+
+The OMP executable comes from upstream releases; it is not Red Hat-built or
+certified. See [image design and runtime requirements](docs/injector.md) for
+workspace compatibility, native libraries, and writable-home requirements.
+
+## Installation
+
+Use a published image from [Releases](https://github.com/phbergsmann/che-omp-ai-tool/releases)
+or build the image locally. Release tags and image versions match the upstream
+OMP version recorded in `OMP_VERSION`.
+
+The registry commands require Python 3.10+ and an authenticated `kubectl` context
+with permission to manage ConfigMaps in the Che installation namespace.
+
+Preview and install the registry entry:
 
 ```sh
 python3 scripts/registry.py validate
@@ -24,24 +38,43 @@ python3 scripts/registry.py install --namespace eclipse-che --dry-run
 python3 scripts/registry.py install --namespace eclipse-che
 ```
 
-For Dev Spaces use `--namespace openshift-devspaces`. Explicit namespaces are
-supported. Prefer a published `@sha256:...` digest for reproducibility. Private
-GHCR images require normal cluster image-pull credentials, configured separately.
-Installation discovers the shared registry by labels, preserves foreign entries,
-and refuses ambiguous discovery. See [registry operations](docs/registry.md).
+For OpenShift Dev Spaces, use `--namespace openshift-devspaces`. Use your actual
+installation namespace if it differs. The installer discovers the shared registry
+by labels and refuses ambiguous matches.
+
+For a reproducible deployment, pass a published image digest with
+`--image ghcr.io/phbergsmann/che-omp-ai-tool@sha256:<digest>`. Private images
+require cluster image-pull credentials configured separately.
+
+See [registry operations](docs/registry.md) for image overrides, upgrades,
+permissions, and troubleshooting.
+
+## Usage
+
+1. Select **Oh My Pi** in the dashboard's AI provider selector when creating or
+   configuring a workspace.
+2. Start the workspace and run `omp --version` in its terminal.
+3. Configure model providers and authentication using
+   [OMP's configuration guidance](https://github.com/can1357/oh-my-pi).
+
+To remove the registry entry:
 
 ```sh
 python3 scripts/registry.py uninstall --namespace eclipse-che --dry-run
 python3 scripts/registry.py uninstall --namespace eclipse-che
 ```
 
-Select OMP in the dashboard when creating a workspace. Run `omp --version` in its
-terminal, then configure models/authentication using OMP's normal configuration.
+Removing the registry entry does not delete workspace files or model credentials.
 
 ## Development
 
-Layout: `Containerfile`, `registry/`, `scripts/`, `test/`, `docs/`, and
-`.github/workflows/`. Python tooling uses only the standard library (Python 3.10+).
+The repository contains the injector `Containerfile`, registry template,
+Python and shell tooling, tests, documentation, and GitHub Actions workflows.
+Python tooling uses the standard library.
+
+Install the lint tools and versions listed in the
+[CI workflow](.github/workflows/ci.yml). Image builds and smoke tests require a
+running Docker or Podman engine.
 
 ```sh
 CONTAINER_ENGINE=podman bash scripts/check.sh
@@ -49,26 +82,14 @@ CONTAINER_ENGINE=podman bash scripts/build-image.sh
 CONTAINER_ENGINE=podman bash scripts/test-image.sh
 ```
 
-Install the lint tools/versions listed in the CI workflow before running the
-static checks locally. Container verification needs a running Docker or Podman
-engine. `OMP_VERSION` is the canonical build, registry, and release version.
-Release tags must match it exactly; OCI revision metadata identifies the
-integration's source commit.
+Pull requests run static validation before a native image build and smoke test.
+Changes to `OMP_VERSION` on `main` automatically tag the commit and start the
+multi-architecture release pipeline, including scanning, signing, and registry
+asset publication. Existing release-environment approval rules apply.
 
-Pull requests run static checks before one native-architecture image build/test.
-They do not run QEMU, multi-architecture publishing, supply-chain release jobs,
-or cluster E2E. Changes to `OMP_VERSION` on `main` automatically tag the exact
-commit and start [release automation](docs/releases.md), which builds both
-architectures, produces SBOM/provenance, signs images, and publishes digest-pinned
-registry artifacts. The [Renovate workflow](docs/renovate.md) proposes
-upstream updates and automerges OMP updates of any size, plus patch and digest
-updates for other dependencies, after required CI checks pass. Other minor
-and major updates require manual merging.
-Configure `RENOVATE_APP_CLIENT_ID`
-and `RENOVATE_APP_PRIVATE_KEY` as repository Actions secrets; the workflow
-generates a fresh, repository-scoped GitHub App token for each run.
+- [Releases and publishing](docs/releases.md)
+- [Dependency update automation](docs/renovate.md)
+- [Che and OpenShift workspace smoke tests](docs/e2e.md)
 
-[Manual E2E procedures](docs/e2e.md) cover actual dashboard selection, injection,
-restart, upgrade, restricted OpenShift security, and diagnostic capture. Run
-these separately against Che and Dev Spaces; local image tests are not a claim
-of live-workspace compatibility.
+Cluster smoke tests run separately from normal PR validation. Local image tests
+do not replace verification in a running Che or Dev Spaces workspace.
