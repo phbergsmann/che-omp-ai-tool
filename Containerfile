@@ -24,7 +24,7 @@ RUN set -eu; \
     done; \
     curl --fail --location --retry 3 "https://raw.githubusercontent.com/can1357/oh-my-pi/$OMP_VERSION/packages/natives/THIRD-PARTY-NOTICES.txt" --output notices/NATIVE-THIRD-PARTY-NOTICES.txt
 
-FROM registry.access.redhat.com/hi/core-runtime:2.43@sha256:329ff8f46fe69f036b96c3463272aa778a6df6a4f7570f080fd248a414652b6e
+FROM registry.access.redhat.com/hi/core-runtime:2.43@sha256:4163796d8b7f28021178093d31cb97c05336fd3f3a4d7006603a7fef29e997e7
 ARG OMP_VERSION
 ARG VCS_REF=unknown
 LABEL org.opencontainers.image.title="OMP Che AI tool injector" \
