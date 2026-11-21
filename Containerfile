@@ -1,4 +1,4 @@
-FROM registry.access.redhat.com/hi/core-runtime:2.43-builder@sha256:c869614f126dac92619f0935da52207ac79199a04683b0ed8f9a180b30edd8ab AS fetch
+FROM registry.access.redhat.com/hi/core-runtime:2.43-builder@sha256:4a25abae7c3221e0d1138b0331c12cb66afe5382d617888cbe37df96494baa03 AS fetch
 ARG OMP_VERSION
 ARG TARGETARCH
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
